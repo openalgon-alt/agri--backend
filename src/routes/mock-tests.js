@@ -1,4 +1,4 @@
-import { query } from './_lib/neon.js';
+import { query } from '../../api/_lib/neon.js';
 
 export default async function handler(req, res) {
   // CORS configuration
