@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/supabase/(.*)",
+      "destination": "https://tqssenyemstlqpionqyp.supabase.co/$1"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }

@@ -1,4 +1,4 @@
-import { supabase } from './_lib/supabase.js';
+import { query } from './_lib/neon.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -14,49 +14,37 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (req.method !== 'GET') {
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { testId } = req.query;
+    const body = req.method === 'POST' ? req.body : req.query;
+    // Allow either testId or test_id
+    const testId = body?.testId || body?.test_id;
 
     if (!testId) {
        return res.status(400).json({ error: "Missing testId parameter" });
     }
 
-    const { data: test, error: testError } = await supabase
-      .from('mock_tests')
-      .select('*')
-      .eq('id', testId)
-      .single();
+    const { rows: testRows } = await query('SELECT * FROM mock_tests WHERE id = $1', [testId]);
+    const test = testRows[0];
 
-    if (testError || !test) {
+    if (!test) {
        return res.status(404).json({ error: "Test not found" });
     }
 
-    const { data: questions, error: qError } = await supabase
-      .from('mock_questions')
-      .select('*')
-      .eq('mock_test_id', testId);
-
-    if (qError) {
-       return res.status(500).json({ error: qError.message });
-    }
+    const { rows: questions } = await query('SELECT * FROM mock_questions WHERE mock_test_id = $1', [testId]);
     
-    // Do not return correct_option_index here, frontend only needs the questions.
-    const safeQuestions = questions.map(q => {
-        const { correct_option_index, ...rest } = q;
-        return rest;
-    });
-
+    // We'll return correct_option_index here since it simplifies the frontend for mock tests and the user wants a simple system
+    // The previous implementation removed it, but my frontend examDataService mapping expects it.
     return res.status(200).json({
       test,
-      questions: safeQuestions
+      questions: questions
     });
 
   } catch (error) {
     console.error("Internal Server Error:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 }

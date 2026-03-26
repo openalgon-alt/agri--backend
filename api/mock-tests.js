@@ -1,4 +1,4 @@
-import { supabase } from './_lib/supabase.js';
+import { query } from './_lib/neon.js';
 
 export default async function handler(req, res) {
   // CORS configuration
@@ -15,24 +15,26 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (req.method !== 'GET') {
+  // Allow both POST (which ExamDataService uses) and GET
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const activeOnly = req.query.active_only !== 'false';
-    let query = supabase.from('mock_tests').select('*').order('created_at', { ascending: false });
+    const body = req.method === 'POST' ? req.body : req.query;
+    const activeOnly = body?.activeOnly !== false && body?.active_only !== 'false';
+
+    let sqlQuery = 'SELECT * FROM mock_tests';
+    const params = [];
 
     if (activeOnly) {
-      query = query.eq('is_active', true);
+      sqlQuery += ' WHERE is_active = $1';
+      params.push(true);
     }
 
-    const { data: mockTests, error } = await query;
+    sqlQuery += ' ORDER BY created_at DESC';
 
-    if (error) {
-       console.error("Error fetching mock tests:", error);
-       return res.status(500).json({ error: error.message });
-    }
+    const { rows: mockTests } = await query(sqlQuery, params);
 
     return res.status(200).json(mockTests);
   } catch (error) {
