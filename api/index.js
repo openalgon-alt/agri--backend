@@ -18,14 +18,8 @@ import adminStudents from '../src/routes/admin/students.js';
 import adminUsers from '../src/routes/admin/users.js';
 
 export default async function handler(req, res) {
-  // CORS configuration for the single endpoint
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  );
+  // CORS configuration is handled globally by vercel.json.
+  // Do NOT add res.setHeader('Access-Control-Allow-Origin', '*') here or it will duplicate into "*, *" and break preflight!
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
