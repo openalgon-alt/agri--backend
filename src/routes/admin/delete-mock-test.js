@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
     // 2. Also try deleting from Supabase in case user_purchases is managed there separately
     try {
-      const { supabase } = await import('../_lib/supabase.js');
+      const { supabase } = await import('../../../api/_lib/supabase.js');
       await supabase.from('user_purchases').delete().eq('mock_test_id', id);
     } catch (e) { console.warn('Skipped Supabase purchase deletion', e.message); }
 
