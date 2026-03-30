@@ -34,6 +34,7 @@ export default async function handler(req, res) {
 
   switch (path) {
     // Public routes
+    case 'ping':                    return res.status(200).json({ status: 'ok', time: '10:32_UTC_deployment' });
     case 'editorial-board-members': return editorialBoardMembers(req, res);
     case 'editorial-sections':      return editorialSections(req, res);
     case 'issues':                  return issues(req, res);
