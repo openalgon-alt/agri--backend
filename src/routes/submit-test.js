@@ -78,12 +78,25 @@ export default async function handler(req, res) {
     }
 
     // 4. Save to Cloud SQL exam_submissions
-    const { rows: submissions } = await query(
-      'INSERT INTO exam_submissions (user_id, mock_test_id, score, total_questions, answers) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-      [user_id, testId, score, total_questions || questions.length || 50, JSON.stringify(answers || {})]
-    );
-
-    const submissionId = submissions[0].id;
+    let submissionId;
+    try {
+        const { rows: submissions } = await query(
+          'INSERT INTO exam_submissions (user_id, mock_test_id, score, total_questions, answers) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+          [user_id, testId, score, total_questions || questions.length || 50, JSON.stringify(answers || {})]
+        );
+        submissionId = submissions[0].id;
+    } catch (insertErr) {
+        if (insertErr.message && insertErr.message.includes('column "mock_test_id"')) {
+            // Fallback for older schemas where the column is named 'test_id'
+            const { rows: submissionsFallback } = await query(
+              'INSERT INTO exam_submissions (user_id, test_id, score, total_questions, answers) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+              [user_id, testId, score, total_questions || questions.length || 50, JSON.stringify(answers || {})]
+            );
+            submissionId = submissionsFallback[0].id;
+        } else {
+            throw insertErr;
+        }
+    }
 
     // 5. Mark the test_attempt as completed in Cloud SQL
     await query(
