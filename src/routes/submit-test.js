@@ -99,10 +99,21 @@ export default async function handler(req, res) {
     }
 
     // 5. Mark the test_attempt as completed in Cloud SQL
-    await query(
-      'UPDATE test_attempts SET completed_at = $1, score = $2 WHERE id = $3',
-      [new Date().toISOString(), score, submission_id]
-    );
+    try {
+        await query(
+          'UPDATE test_attempts SET completed_at = $1, score = $2 WHERE id = $3',
+          [new Date().toISOString(), score, submission_id]
+        );
+    } catch (updateErr) {
+        if (updateErr.message && updateErr.message.includes('column "score"')) {
+            await query(
+              'UPDATE test_attempts SET completed_at = $1 WHERE id = $2',
+              [new Date().toISOString(), submission_id]
+            );
+        } else {
+            throw updateErr;
+        }
+    }
 
     return res.status(200).json({
       success: true,
