@@ -25,6 +25,11 @@ export default async function handler(req, res) {
       )
     `);
 
+    // Ensure new columns exist if the table was created before the new features
+    await query(`ALTER TABLE exam_submissions ADD COLUMN IF NOT EXISTS answers JSONB`);
+    await query(`ALTER TABLE exam_submissions ADD COLUMN IF NOT EXISTS total_questions INTEGER DEFAULT 50`);
+    await query(`ALTER TABLE test_attempts ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0`);
+
     // 1. Get the attempt from Cloud SQL
     const { rows: attempts } = await query(
       'SELECT test_id FROM test_attempts WHERE id = $1',
