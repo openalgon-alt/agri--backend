@@ -36,6 +36,17 @@ export default async function handler(req, res) {
       )
     `);
 
+    // Migrate existing tables that may be missing columns
+    const migrations = [
+      `ALTER TABLE user_purchases ADD COLUMN IF NOT EXISTS email TEXT`,
+      `ALTER TABLE user_purchases ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'Online'`,
+      `ALTER TABLE user_purchases ADD COLUMN IF NOT EXISTS granted_by_admin BOOLEAN DEFAULT true`,
+      `ALTER TABLE user_purchases ADD COLUMN IF NOT EXISTS purchase_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`,
+    ];
+    for (const sql of migrations) {
+      try { await query(sql); } catch (_) { /* column may already exist */ }
+    }
+
     // Add unique constraint if not exists
     try {
       await query(`ALTER TABLE user_purchases ADD CONSTRAINT uq_user_purchases_user_test UNIQUE (user_id, mock_test_id)`);

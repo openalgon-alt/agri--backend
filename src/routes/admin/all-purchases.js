@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Ensure user_purchases table exists (auto-migrate)
+    // Ensure table exists
     await query(`
       CREATE TABLE IF NOT EXISTS user_purchases (
         id SERIAL PRIMARY KEY,
@@ -22,6 +22,17 @@ export default async function handler(req, res) {
         purchase_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Migrate existing tables that may be missing columns
+    const migrations = [
+      `ALTER TABLE user_purchases ADD COLUMN IF NOT EXISTS email TEXT`,
+      `ALTER TABLE user_purchases ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'Online'`,
+      `ALTER TABLE user_purchases ADD COLUMN IF NOT EXISTS granted_by_admin BOOLEAN DEFAULT true`,
+      `ALTER TABLE user_purchases ADD COLUMN IF NOT EXISTS purchase_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`,
+    ];
+    for (const sql of migrations) {
+      try { await query(sql); } catch (_) { /* ignore */ }
+    }
 
     const result = await query(`
       SELECT 
