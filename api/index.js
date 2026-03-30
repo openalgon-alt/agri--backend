@@ -1,5 +1,6 @@
 import editorialBoardMembers from '../src/routes/editorial-board-members.js';
 import editorialSections from '../src/routes/editorial-sections.js';
+import getUserSubmissions from '../src/routes/get-user-submissions.js';
 import issues from '../src/routes/issues.js';
 import mockQuestions from '../src/routes/mock-questions.js';
 import mockTests from '../src/routes/mock-tests.js';
@@ -44,6 +45,7 @@ export default async function handler(req, res) {
     case 'start-test':              return startTest(req, res);
     case 'submit-test':             return submitTest(req, res);
     case 'user-purchases':          return userPurchases(req, res);
+    case 'user-submissions':        return getUserSubmissions(req, res);
 
     // Admin - Mock Tests
     case 'admin/delete-mock-question': return adminDeleteMockQuestion(req, res);
