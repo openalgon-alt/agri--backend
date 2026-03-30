@@ -20,6 +20,7 @@ import adminRevokeAccess from '../src/routes/admin/revoke-access.js';
 import adminSaveMockQuestion from '../src/routes/admin/save-mock-question.js';
 import adminSaveMockTest from '../src/routes/admin/save-mock-test.js';
 import adminStudents from '../src/routes/admin/students.js';
+import adminStudentHistory from '../src/routes/admin/student-history.js';
 import adminUsers from '../src/routes/admin/users.js';
 
 export default async function handler(req, res) {
@@ -55,12 +56,13 @@ export default async function handler(req, res) {
     case 'admin/save-mock-test':       return adminSaveMockTest(req, res);
 
     // Admin - User Access Management
-    case 'admin/all-purchases': return adminAllPurchases(req, res);
-    case 'admin/grant-access':  return adminGrantAccess(req, res);
-    case 'admin/lookup-user':   return adminLookupUser(req, res);
-    case 'admin/revoke-access': return adminRevokeAccess(req, res);
-    case 'admin/students':      return adminStudents(req, res);
-    case 'admin/users':         return adminUsers(req, res);
+    case 'admin/all-purchases':   return adminAllPurchases(req, res);
+    case 'admin/grant-access':    return adminGrantAccess(req, res);
+    case 'admin/lookup-user':     return adminLookupUser(req, res);
+    case 'admin/revoke-access':   return adminRevokeAccess(req, res);
+    case 'admin/students':        return adminStudents(req, res);
+    case 'admin/student-history': return adminStudentHistory(req, res);
+    case 'admin/users':           return adminUsers(req, res);
 
     default:
       if (path === 'index' || path === '') {
