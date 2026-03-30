@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { query } from '../../api/_lib/neon.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,37 +12,47 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing submission_id or user_id' });
     }
 
-    // 1. Get the attempt to find test_id
-    const { data: attempt, error: attemptError } = await supabase
-      .from('test_attempts')
-      .select('test_id')
-      .eq('id', submission_id)
-      .single();
+    // Auto-migrate: Ensure exam_submissions table exists in Cloud SQL
+    await query(`
+      CREATE TABLE IF NOT EXISTS exam_submissions (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        mock_test_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        total_questions INTEGER DEFAULT 50,
+        answers JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-    if (attemptError || !attempt) {
-      return res.status(404).json({ error: 'Attempt not found' });
+    // 1. Get the attempt from Cloud SQL
+    const { rows: attempts } = await query(
+      'SELECT test_id FROM test_attempts WHERE id = $1',
+      [submission_id]
+    );
+
+    if (attempts.length === 0) {
+      return res.status(404).json({ error: 'Attempt not found in Cloud SQL' });
     }
 
-    const testId = attempt.test_id;
+    const testId = attempts[0].test_id;
 
-    // 2. Fetch all questions for this test to calculate score
-    const { data: questions, error: qError } = await supabase
-      .from('mock_questions')
-      .select('*')
-      .eq('mock_test_id', testId);
-
-    if (qError) {
-      return res.status(500).json({ error: 'Failed to fetch questions' });
-    }
+    // 2. Fetch all questions for this test from Cloud SQL
+    const { rows: questions } = await query(
+      'SELECT * FROM mock_questions WHERE mock_test_id = $1',
+      [testId]
+    );
 
     let score = 0;
     let populatedQuestions = [];
 
     // 3. Calculate score
-    if (questions && answers) {
+    if (questions && Array.isArray(questions) && answers) {
       populatedQuestions = questions.map(q => {
         const userAnswer = answers[q.id];
-        const correctOption = q.options[q.correct_option_index];
+        const options = q.options || [];
+        const correctIndex = q.correct_option_index ?? 0;
+        const correctOption = options[correctIndex];
 
         if (userAnswer === correctOption) {
           score += (q.marks || 4);
@@ -57,8 +62,8 @@ export default async function handler(req, res) {
           id: q.id,
           mock_test_id: q.mock_test_id,
           question_text: q.question_text || q.question,
-          options: q.options,
-          correct_option_index: q.correct_option_index,
+          options: options,
+          correct_option_index: correctIndex,
           image_url: q.image_url || q.image,
           marks: q.marks,
           topic: q.topic
@@ -66,41 +71,19 @@ export default async function handler(req, res) {
       });
     }
 
-    // 4. Save to exam_submissions with answers stored for future "View Result"
-    const { data: submission, error: subError } = await supabase
-      .from('exam_submissions')
-      .insert({
-        user_id: user_id,
-        mock_test_id: testId,
-        score: score,
-        total_questions: total_questions || questions?.length || 50,
-        answers: answers || {}   // Store answers as JSONB for View Result
-      })
-      .select()
-      .single();
+    // 4. Save to Cloud SQL exam_submissions
+    const { rows: submissions } = await query(
+      'INSERT INTO exam_submissions (user_id, mock_test_id, score, total_questions, answers) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [user_id, testId, score, total_questions || questions.length || 50, JSON.stringify(answers || {})]
+    );
 
-    if (subError) {
-      console.error('Error saving submission (non-fatal):', subError.message);
-      // If 'answers' column doesn't exist yet, try without it
-      if (subError.message?.includes('answers')) {
-        await supabase
-          .from('exam_submissions')
-          .insert({
-            user_id,
-            mock_test_id: testId,
-            score,
-            total_questions: total_questions || questions?.length || 50
-          });
-      }
-    }
+    const submissionId = submissions[0].id;
 
-    const submissionId = submission?.id || null;
-
-    // 5. Mark the test_attempt as completed
-    await supabase
-      .from('test_attempts')
-      .update({ completed_at: new Date().toISOString(), score })
-      .eq('id', submission_id);
+    // 5. Mark the test_attempt as completed in Cloud SQL
+    await query(
+      'UPDATE test_attempts SET completed_at = $1, score = $2 WHERE id = $3',
+      [new Date().toISOString(), score, submission_id]
+    );
 
     return res.status(200).json({
       success: true,
@@ -110,7 +93,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("Submission Error (submit-test):", err);
     return res.status(500).json({ error: err.message });
   }
 }

@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { query } from '../../api/_lib/neon.js';
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
@@ -16,44 +11,23 @@ export default async function handler(req, res) {
   if (!userId) return res.status(400).json({ error: 'userId query param required' });
 
   try {
-    // Fetch submissions for this user (by firebase_uid or email)
-    const { data: submissions, error } = await supabase
-      .from('exam_submissions')
-      .select(`
-        id,
-        user_id,
-        mock_test_id,
-        score,
-        total_questions,
-        answers,
-        created_at,
-        mock_tests ( title )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      // If answers column doesn't exist, try without it
-      if (error.message?.includes('answers')) {
-        const { data: fallback, error: fallbackError } = await supabase
-          .from('exam_submissions')
-          .select(`
-            id, user_id, mock_test_id, score, total_questions, created_at,
-            mock_tests ( title )
-          `)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
-
-        if (fallbackError) return res.status(500).json({ error: fallbackError.message });
-        return res.status(200).json(formatSubmissions(fallback || []));
-      }
-      return res.status(500).json({ error: error.message });
-    }
+    // 1. Fetch submissions for this user from Cloud SQL
+    const { rows: submissions } = await query(
+      `SELECT s.id, s.user_id, s.mock_test_id, s.score, s.total_questions, s.answers, s.created_at, t.title as test_title
+       FROM exam_submissions s
+       LEFT JOIN mock_tests t ON s.mock_test_id = t.id
+       WHERE s.user_id = $1
+       ORDER BY s.created_at DESC`,
+      [userId]
+    );
 
     return res.status(200).json(formatSubmissions(submissions || []));
 
   } catch (err) {
-    console.error('Error in get-user-submissions:', err);
+    if (err.message && err.message.includes('relation "exam_submissions" does not exist')) {
+      return res.status(200).json([]);
+    }
+    console.error('Error (get-user-submissions):', err);
     return res.status(500).json({ error: err.message });
   }
 }
@@ -63,7 +37,7 @@ function formatSubmissions(rows) {
     id: s.id,
     userId: s.user_id,
     mockTestId: s.mock_test_id,
-    testTitle: s.mock_tests?.title || `Test #${s.mock_test_id}`,
+    testTitle: s.test_title || `Mock Test #${s.mock_test_id}`,
     score: s.score || 0,
     totalQuestions: s.total_questions || 50,
     answers: s.answers || {},

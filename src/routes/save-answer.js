@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { query } from '../../api/_lib/neon.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,25 +12,30 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Usually we would want to check ownership, but for simplicity we can insert/upsert
-    const { error: upsertError } = await supabase
-      .from('test_answers')
-      .upsert({
-        attempt_id: submission_id,
-        question_id: question_id,
-        answer: answer
-      }, { onConflict: 'attempt_id,question_id' }); // Assuming unique constraint on these two
+    // Auto-migrate: Ensure test_answers table exists in Cloud SQL
+    await query(`
+      CREATE TABLE IF NOT EXISTS test_answers (
+        id SERIAL PRIMARY KEY,
+        attempt_id INTEGER NOT NULL,
+        question_id INTEGER NOT NULL,
+        answer TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (attempt_id, question_id)
+      )
+    `);
 
-    if (upsertError) {
-        // If test_answers table doesn't exist or is not matching schema, we'll swallow or return error
-        // Let's console log for now
-        console.error("UPSERT ERROR", upsertError);
-        return res.status(500).json({ error: upsertError.message });
-    }
+    // Upsert logic for Cloud SQL
+    await query(`
+      INSERT INTO test_answers (attempt_id, question_id, answer)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (attempt_id, question_id)
+      DO UPDATE SET answer = EXCLUDED.answer, updated_at = CURRENT_TIMESTAMP
+    `, [submission_id, question_id, answer]);
 
     return res.status(200).json({ success: true });
 
   } catch (err) {
+    console.error("Save-Answer Error:", err);
     return res.status(500).json({ error: err.message });
   }
 }
