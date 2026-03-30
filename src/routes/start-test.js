@@ -51,9 +51,9 @@ export default async function handler(req, res) {
       }
     }
 
-    // Fetch test duration from Cloud SQL mock_tests
+    // Fetch test to verify it exists in Cloud SQL
     const { rows: tests } = await query(
-      'SELECT duration_minutes FROM mock_tests WHERE id = $1',
+      'SELECT id FROM mock_tests WHERE id = $1',
       [test_id]
     );
 
@@ -61,7 +61,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Test not found in Cloud SQL' });
     }
 
-    const durationMinutes = tests[0].duration_minutes || 50;
+    const durationMinutes = 50; // Defaulting to 50 minutes
     const expiresAt = new Date(Date.now() + durationMinutes * 60000);
 
     const { rows: newAttempts } = await query(
