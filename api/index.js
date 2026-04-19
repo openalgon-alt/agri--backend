@@ -10,6 +10,7 @@ import saveProfile from '../src/routes/save-profile.js';
 import startTest from '../src/routes/start-test.js';
 import submitTest from '../src/routes/submit-test.js';
 import userPurchases from '../src/routes/user-purchases.js';
+import userPerformance from '../src/routes/user-performance.js';
 
 import adminAllPurchases from '../src/routes/admin/all-purchases.js';
 import adminDeleteMockQuestion from '../src/routes/admin/delete-mock-question.js';
@@ -22,6 +23,10 @@ import adminSaveMockTest from '../src/routes/admin/save-mock-test.js';
 import adminStudents from '../src/routes/admin/students.js';
 import adminStudentHistory from '../src/routes/admin/student-history.js';
 import adminUsers from '../src/routes/admin/users.js';
+
+import offlineCoaching from '../src/routes/offline-coaching.js';
+import adminSaveOfflineCoaching from '../src/routes/admin/save-offline-coaching.js';
+import adminDeleteOfflineCoaching from '../src/routes/admin/delete-offline-coaching.js';
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -48,6 +53,7 @@ export default async function handler(req, res) {
     case 'submit-test':             return submitTest(req, res);
     case 'user-purchases':          return userPurchases(req, res);
     case 'user-submissions':        return getUserSubmissions(req, res);
+    case 'user-performance':        return userPerformance(req, res);
 
     // Admin - Mock Tests
     case 'admin/delete-mock-question': return adminDeleteMockQuestion(req, res);
@@ -63,6 +69,9 @@ export default async function handler(req, res) {
     case 'admin/students':        return adminStudents(req, res);
     case 'admin/student-history': return adminStudentHistory(req, res);
     case 'admin/users':           return adminUsers(req, res);
+    case 'offline-coaching':      return offlineCoaching(req, res);
+    case 'admin/save-offline-coaching': return adminSaveOfflineCoaching(req, res);
+    case 'admin/delete-offline-coaching': return adminDeleteOfflineCoaching(req, res);
 
     default:
       if (path === 'index' || path === '') {
