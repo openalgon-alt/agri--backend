@@ -29,12 +29,63 @@ import adminSaveOfflineCoaching from '../src/routes/admin/save-offline-coaching.
 import adminDeleteOfflineCoaching from '../src/routes/admin/delete-offline-coaching.js';
 
 export default async function handler(req, res) {
+  // Always set CORS headers in the response
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const path = url.pathname.replace(/^\/api\//, '').replace(/\/$/, '');
+  let path = url.pathname.replace(/^\/api\/?/, '').replace(/\/$/, '');
+
+  // Support body action POST requests (from the frontend `/api` POST wrapper)
+  if (path === '' && req.method === 'POST' && req.body && req.body.action) {
+    const action = req.body.action;
+    const payload = req.body.payload || {};
+    
+    console.log(`[Router] Intercepted body action: ${action} with payload keys: ${Object.keys(payload).join(', ')}`);
+    
+    // Rewrite req.body to be the payload so the handlers can read fields directly
+    req.body = payload;
+    
+    // Translate action to URL path
+    if (action === 'get-profile') {
+      req.method = 'GET';
+      req.query = { ...req.query, ...payload };
+      path = 'save-profile'; // get-profile GET is handled in save-profile.js
+    } else if (action === 'get-user-purchases') {
+      req.method = 'GET';
+      req.query = { ...req.query, ...payload };
+      path = 'user-purchases';
+    } else if (action === 'get-user-submissions') {
+      req.method = 'GET';
+      req.query = { ...req.query, ...payload };
+      path = 'user-submissions';
+    } else if (action === 'get-user-performance') {
+      req.method = 'GET';
+      req.query = { ...req.query, ...payload };
+      path = 'user-performance';
+    } else if (action === 'list-offline-coaching') {
+      req.method = 'GET';
+      req.query = { ...req.query, ...payload };
+      path = 'offline-coaching';
+    } else if (action === 'lookup-user-by-email' || action === 'admin/lookup-user') {
+      req.method = 'POST';
+      path = 'admin/lookup-user';
+    } else if (action === 'grant-access' || action === 'admin/grant-access') {
+      req.method = 'POST';
+      path = 'admin/grant-access';
+    } else if (action === 'revoke-access' || action === 'admin/revoke-access') {
+      req.method = 'POST';
+      path = 'admin/revoke-access';
+    } else {
+      path = action;
+    }
+  }
 
   console.log(`[Router] ${req.method} /api/${path}`);
 

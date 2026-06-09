@@ -46,29 +46,42 @@ export default async function handler(req, res) {
       guardian_name,
       guardian_profession,
       guardian_contact,
+      category,
     } = req.body;
 
-    if (!firebase_uid || !name || !mobile || !email || !college || !district || !guardian_name || !guardian_profession || !guardian_contact) {
-      return res.status(400).json({ error: 'All profile fields are required.' });
+    if (!firebase_uid) {
+      return res.status(400).json({ error: 'firebase_uid is required.' });
     }
 
     // Upsert using ON CONFLICT on firebase_uid
     const result = await query(
       `INSERT INTO student_profiles
-         (firebase_uid, name, mobile, email, college, district, guardian_name, guardian_profession, guardian_contact, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+         (firebase_uid, name, mobile, email, college, district, guardian_name, guardian_profession, guardian_contact, category, updated_at)
+       VALUES ($1, COALESCE($2, ''), COALESCE($3, ''), COALESCE($4, ''), COALESCE($5, ''), COALESCE($6, ''), COALESCE($7, ''), COALESCE($8, ''), COALESCE($9, ''), COALESCE($10, ''), NOW())
        ON CONFLICT (firebase_uid) DO UPDATE SET
          name               = EXCLUDED.name,
          mobile             = EXCLUDED.mobile,
-         email              = EXCLUDED.email,
+         email              = COALESCE(EXCLUDED.email, student_profiles.email),
          college            = EXCLUDED.college,
          district           = EXCLUDED.district,
          guardian_name      = EXCLUDED.guardian_name,
          guardian_profession = EXCLUDED.guardian_profession,
          guardian_contact   = EXCLUDED.guardian_contact,
+         category           = COALESCE(EXCLUDED.category, student_profiles.category),
          updated_at         = NOW()
        RETURNING *`,
-      [firebase_uid, name, mobile, email, college, district, guardian_name, guardian_profession, guardian_contact]
+      [
+        firebase_uid,
+        name || '',
+        mobile || '',
+        email || '',
+        college || '',
+        district || '',
+        guardian_name || '',
+        guardian_profession || '',
+        guardian_contact || '',
+        category || '',
+      ]
     );
 
     return res.status(200).json({ success: true, profile: result.rows[0] });
