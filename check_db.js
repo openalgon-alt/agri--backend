@@ -1,4 +1,4 @@
-import { query } from './api/_lib/neon.js';
+import { query } from './api/_lib/db.js';
 
 async function check() {
   try {

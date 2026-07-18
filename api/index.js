@@ -28,6 +28,10 @@ import offlineCoaching from '../src/routes/offline-coaching.js';
 import adminSaveOfflineCoaching from '../src/routes/admin/save-offline-coaching.js';
 import adminDeleteOfflineCoaching from '../src/routes/admin/delete-offline-coaching.js';
 
+import aoAaoSignup from '../src/routes/ao-aao-signup.js';
+import aoAaoLogin from '../src/routes/ao-aao-login.js';
+import adminAoAaoUsers from '../src/routes/admin/ao-aao-users.js';
+
 export default async function handler(req, res) {
   // Always set CORS headers in the response
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -82,6 +86,15 @@ export default async function handler(req, res) {
     } else if (action === 'revoke-access' || action === 'admin/revoke-access') {
       req.method = 'POST';
       path = 'admin/revoke-access';
+    } else if (action === 'ao-aao/signup') {
+      req.method = 'POST';
+      path = 'ao-aao/signup';
+    } else if (action === 'ao-aao/login') {
+      req.method = 'POST';
+      path = 'ao-aao/login';
+    } else if (action === 'admin/ao-aao-users') {
+      req.method = 'GET';
+      path = 'admin/ao-aao-users';
     } else {
       path = action;
     }
@@ -123,6 +136,11 @@ export default async function handler(req, res) {
     case 'offline-coaching':      return offlineCoaching(req, res);
     case 'admin/save-offline-coaching': return adminSaveOfflineCoaching(req, res);
     case 'admin/delete-offline-coaching': return adminDeleteOfflineCoaching(req, res);
+
+    // AO/AAO mobile login/registration
+    case 'ao-aao/signup':         return aoAaoSignup(req, res);
+    case 'ao-aao/login':          return aoAaoLogin(req, res);
+    case 'admin/ao-aao-users':    return adminAoAaoUsers(req, res);
 
     default:
       if (path === 'index' || path === '') {

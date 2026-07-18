@@ -1,4 +1,4 @@
-import { query } from '../../api/_lib/neon.js';
+import { query } from '../../api/_lib/db.js';
 
 export default async function handler(req, res) {
   
@@ -33,6 +33,7 @@ export default async function handler(req, res) {
 
     const { rows: mockTests } = await query(sqlQuery, params);
 
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
     return res.status(200).json(mockTests);
   } catch (error) {
     console.error("Internal Server Error:", error);

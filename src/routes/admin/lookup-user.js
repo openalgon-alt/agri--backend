@@ -13,6 +13,19 @@ export default async function handler(req, res) {
   try {
     const trimmed = email.trim();
 
+    // First search in ao_aao_students (AO/AAO mobile registered users)
+    const aoResult = await query(
+      `SELECT mobile AS user_id, name, (mobile || '@aoaao.com') AS email, mobile AS phone
+       FROM ao_aao_students
+       WHERE mobile = $1
+       LIMIT 1`,
+      [trimmed]
+    );
+
+    if (aoResult.rows.length > 0) {
+      return res.status(200).json({ ...aoResult.rows[0], _synthetic: false });
+    }
+
     const result = await query(
       `SELECT firebase_uid AS user_id, name, email, mobile AS phone
        FROM student_profiles

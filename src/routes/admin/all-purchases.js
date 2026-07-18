@@ -8,7 +8,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Ensure table exists
+    // Ensure tables exist
+    await query(`
+      CREATE TABLE IF NOT EXISTS ao_aao_students (
+        id SERIAL PRIMARY KEY,
+        mobile VARCHAR(20) UNIQUE NOT NULL,
+        password VARCHAR(100) NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        college VARCHAR(200) NOT NULL,
+        district VARCHAR(100) NOT NULL,
+        category VARCHAR(50) DEFAULT 'General',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     await query(`
       CREATE TABLE IF NOT EXISTS user_purchases (
         id SERIAL PRIMARY KEY,
@@ -38,8 +51,8 @@ export default async function handler(req, res) {
       SELECT 
         up.*,
         mt.title AS test_title,
-        COALESCE(up.email, sp.email, up.user_id) AS user_email,
-        COALESCE(sp.name, up.email, up.user_id) AS user_name
+        COALESCE(NULLIF(up.email, ''), NULLIF(sp.email, ''), up.user_id) AS user_email,
+        COALESCE(NULLIF(sp.name, ''), NULLIF(up.email, ''), up.user_id) AS user_name
       FROM user_purchases up
       LEFT JOIN mock_tests mt ON up.mock_test_id = mt.id
       LEFT JOIN student_profiles sp ON sp.firebase_uid = up.user_id OR sp.email = up.email

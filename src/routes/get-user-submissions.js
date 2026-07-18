@@ -1,4 +1,4 @@
-import { query } from '../../api/_lib/neon.js';
+import { query } from '../../api/_lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         );
         submissions = result.rows;
     } catch (dbErr) {
-        if (dbErr.message && dbErr.message.includes('column s.mock_test_id does not exist')) {
+        if (dbErr.message && dbErr.message.includes('mock_test_id')) {
             // Fallback for older exam_submissions schemas
             const resultFallback = await query(
               `SELECT s.id, s.user_id, s.test_id as t_mock_test_id, s.score, s.total_questions, s.answers, s.created_at, t.title as test_title

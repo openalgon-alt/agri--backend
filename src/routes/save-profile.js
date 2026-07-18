@@ -59,16 +59,16 @@ export default async function handler(req, res) {
          (firebase_uid, name, mobile, email, college, district, guardian_name, guardian_profession, guardian_contact, category, updated_at)
        VALUES ($1, COALESCE($2, ''), COALESCE($3, ''), COALESCE($4, ''), COALESCE($5, ''), COALESCE($6, ''), COALESCE($7, ''), COALESCE($8, ''), COALESCE($9, ''), COALESCE($10, ''), NOW())
        ON CONFLICT (firebase_uid) DO UPDATE SET
-         name               = EXCLUDED.name,
-         mobile             = EXCLUDED.mobile,
-         email              = COALESCE(EXCLUDED.email, student_profiles.email),
-         college            = EXCLUDED.college,
-         district           = EXCLUDED.district,
-         guardian_name      = EXCLUDED.guardian_name,
-         guardian_profession = EXCLUDED.guardian_profession,
-         guardian_contact   = EXCLUDED.guardian_contact,
-         category           = COALESCE(EXCLUDED.category, student_profiles.category),
-         updated_at         = NOW()
+         name                = COALESCE(NULLIF(EXCLUDED.name, ''), student_profiles.name),
+         mobile              = COALESCE(NULLIF(EXCLUDED.mobile, ''), student_profiles.mobile),
+         email               = COALESCE(NULLIF(EXCLUDED.email, ''), student_profiles.email),
+         college             = COALESCE(NULLIF(EXCLUDED.college, ''), student_profiles.college),
+         district            = COALESCE(NULLIF(EXCLUDED.district, ''), student_profiles.district),
+         guardian_name       = COALESCE(NULLIF(EXCLUDED.guardian_name, ''), student_profiles.guardian_name),
+         guardian_profession = COALESCE(NULLIF(EXCLUDED.guardian_profession, ''), student_profiles.guardian_profession),
+         guardian_contact    = COALESCE(NULLIF(EXCLUDED.guardian_contact, ''), student_profiles.guardian_contact),
+         category            = COALESCE(NULLIF(EXCLUDED.category, ''), student_profiles.category),
+         updated_at          = NOW()
        RETURNING *`,
       [
         firebase_uid,

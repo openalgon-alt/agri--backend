@@ -1,4 +1,4 @@
-import { query } from '../../api/_lib/neon.js';
+import { query } from '../../api/_lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -56,12 +56,26 @@ export default async function handler(req, res) {
     if (questions && Array.isArray(questions) && answers) {
       populatedQuestions = questions.map(q => {
         const userAnswer = answers[q.id];
-        const options = q.options || [];
+        const optionsString = q.options || '[]';
+        const options = Array.isArray(optionsString) ? optionsString : JSON.parse(optionsString);
         const correctIndex = q.correct_option_index ?? 0;
         const correctOption = options[correctIndex];
 
-        if (userAnswer === correctOption) {
-          score += (q.marks || 4);
+        let isCorrect = false;
+
+        // Handle case where userAnswer is the exact text of the option (older frontend versions)
+        if (typeof userAnswer === 'string' && userAnswer === correctOption) {
+            isCorrect = true;
+        } else {
+            // Handle case where userAnswer is the index (newer frontend versions)
+            const userIndex = parseInt(String(userAnswer ?? ''), 10);
+            if (!isNaN(userIndex) && userIndex === parseInt(String(correctIndex ?? '0'), 10)) {
+                isCorrect = true;
+            }
+        }
+
+        if (isCorrect) {
+          score += Number(q.marks || 4);
         }
 
         return {

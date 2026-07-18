@@ -1,4 +1,4 @@
-import pool from './api/_lib/neon.js';
+import pool from './api/_lib/db.js';
 
 async function initDB() {
   const client = await pool.connect();

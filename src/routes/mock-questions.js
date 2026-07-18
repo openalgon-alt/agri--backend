@@ -1,4 +1,4 @@
-import { query } from '../../api/_lib/neon.js';
+import { query } from '../../api/_lib/db.js';
 
 export default async function handler(req, res) {
   
@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     
     // We'll return correct_option_index here since it simplifies the frontend for mock tests and the user wants a simple system
     // The previous implementation removed it, but my frontend examDataService mapping expects it.
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate');
     return res.status(200).json({
       test,
       questions: questions
